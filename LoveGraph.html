@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All You Need Is Math</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load GSAP (GreenSock Animation Platform) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <!-- Load Handwriting Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Playfair+Display:wght@700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* New class for the handwritten style */
+        .handwriting-font {
+            font-family: 'Caveat', cursive;
+            letter-spacing: 1px;
+        }
+
+        /* Container for each graph to manage positioning and text overlay */
+        .graph-wrapper {
+            position: relative;
+            aspect-ratio: 1 / 1; /* Keep the canvas square */
+            width: 100%;
+            max-width: 250px; /* Max size for desktop view */
+        }
+
+        /* Custom button styling for a nice, clickable look */
+        .love-button {
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(248, 113, 113, 0.4), 0 2px 4px -2px rgba(248, 113, 113, 0.4);
+        }
+        .love-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(248, 113, 113, 0.6), 0 4px 6px -4px rgba(248, 113, 113, 0.6);
+        }
+        .love-button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        /* Heart Modal styles */
+        #heart-modal {
+            transition: opacity 0.5s ease-in-out;
+        }
+        #heart-canvas {
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+    </style>
+</head>
+<!-- DARK THEME APPLIED HERE -->
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 text-gray-100">
+
+    <!-- 
+        INTRODUCTION MODAL 
+        This is shown first and pauses the main animation 
+    -->
+    <div id="intro-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 backdrop-blur-sm transition-opacity duration-500">
+        <div class="bg-gray-800 p-8 rounded-2xl shadow-3xl max-w-sm w-full text-center border-2 border-red-400/50 transform scale-100 transition-transform duration-500" id="modal-content">
+            <p class="text-3xl font-bold text-red-400 handwriting-font mb-6 leading-relaxed sm:text-4xl">
+                Do you know what I feel for you?
+            </p>
+            <button id="start-button" class="love-button bg-red-500 hover:bg-red-600 text-gray-900 font-bold py-3 px-8 rounded-full transition duration-200">
+                Yes, tell me!
+            </button>
+        </div>
+    </div>
+    
+    <!-- MAIN CONTENT -->
+    <div class="max-w-6xl w-full text-center">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-100 mb-2 font-[Playfair Display]">
+            ALL YOU NEED IS
+        </h1>
+        <!-- Hidden until animation is complete -->
+        <p id="subtext" class="text-xl sm:text-2xl font-semibold text-red-400 mb-12 opacity-0 transition-opacity duration-1000 handwriting-font">
+            LOVE
+        </p>
+
+        <!-- Container for all four individual graphs -->
+        <div id="graph-container" class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 justify-items-center">
+            
+            <!-- L Graph -->
+            <div class="graph-wrapper bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+                <canvas id="canvas-L" width="250" height="250" class="rounded-xl bg-gray-900"></canvas>
+            </div>
+
+            <!-- O Graph -->
+            <div class="graph-wrapper bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+                <canvas id="canvas-O" width="250" height="250" class="rounded-xl bg-gray-900"></canvas>
+            </div>
+
+            <!-- V Graph -->
+            <div class="graph-wrapper bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+                <canvas id="canvas-V" width="250" height="250" class="rounded-xl bg-gray-900"></canvas>
+            </div>
+
+            <!-- E Graph -->
+            <div class="graph-wrapper bg-gray-800 rounded-xl shadow-2xl border border-gray-700">
+                <canvas id="canvas-E" width="250" height="250" class="rounded-xl bg-gray-900"></canvas>
+            </div>
+
+        </div>
+
+        <!-- Heart Formula at the bottom (Clickable) -->
+        <div id="heart-formula-container" class="mt-16 p-6 rounded-2xl border-2 border-red-500/50 bg-gray-800 cursor-pointer hover:bg-gray-700 transition duration-300 transform hover:scale-[1.01] shadow-xl">
+            <p class="text-2xl font-semibold text-red-400 mb-3 handwriting-font">
+                But what about the true equation of the heart? Click to see it!
+            </p>
+            <!-- Formula content rendered by MathJax -->
+            <div id="heart-formula-text" class="text-2xl font-bold text-red-300 handwriting-font">
+                $$ \begin{cases} x(t) = 16 \sin^3(t) \\ y(t) = 13 \cos(t) - 5 \cos(2t) - 2 \cos(3t) - \cos(4t) \end{cases} $$
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL SCREEN HEART GRAPH CONTAINER -->
+    <div id="heart-modal" class="fixed inset-0 z-40 bg-gray-900 flex flex-col items-center justify-center opacity-0 pointer-events-none">
+        <!-- Message rain is drawn directly onto the canvas -->
+        <canvas id="heart-canvas" class="shadow-2xl rounded-2xl border-4 border-red-500/50"></canvas>
+        <button id="close-heart-button" class="absolute top-4 right-4 md:top-8 md:right-8 text-gray-400 hover:text-red-400 transition text-4xl font-bold p-2 rounded-full z-50 focus:outline-none">
+            &times;
+        </button>
+    </div>
+
+    <script>
+        // Add MathJax for rendering the LaTeX/math symbols in the HTML
+        var script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+        script.async = true;
+        document.head.appendChild(script);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const subtext = document.getElementById('subtext');
+            const introModal = document.getElementById('intro-modal');
+            const startButton = document.getElementById('start-button');
+            const modalContent = document.getElementById('modal-content');
+            const heartFormulaContainer = document.getElementById('heart-formula-container');
+            const heartModal = document.getElementById('heart-modal');
+            const heartCanvas = document.getElementById('heart-canvas');
+            const closeHeartButton = document.getElementById('close-heart-button');
+            
+            const CANVAS_SIZE = 250; // Standard size for small canvases
+
+            // Global settings for the graph
+            const globalSettings = {
+                lineColor: '#F87171', // Tailwind red-400
+                axisColor: '#4B5563', // Tailwind gray-600
+                lineWidth: 4,
+            };
+
+            // --- Rain Effect Variables ---
+            let messageDrops = [];
+            let isRaining = false;
+            let dropInterval = null;
+            const TEXT_RAIN_FONT = 'bold 24px "Caveat", cursive';
+            // ---------------------------
+
+            // 1. Define the four letters/graphs (L O V E)
+            const letters = [
+                {
+                    key: 'L',
+                    id: 'canvas-L',
+                    domain: { xMin: -5, xMax: 5, yMin: -5, yMax: 5 },
+                    func: (x) => 1 / x,
+                    tDomain: { tMin: 0.1, tMax: 3.5 },
+                    isX: false,
+                    drawPoints: 50,
+                    xScale: 1,
+                    yScale: 1.5,
+                },
+                {
+                    key: 'O',
+                    id: 'canvas-O',
+                    domain: { xMin: -5, xMax: 5, yMin: -5, yMax: 5 },
+                    func: (t) => ({ x: 3 * Math.cos(t), y: 3 * Math.sin(t) }),
+                    tDomain: { tMin: 0, tMax: 2 * Math.PI },
+                    isX: 'param',
+                    drawPoints: 100,
+                    xScale: 1.5,
+                    yScale: 1.5,
+                },
+                {
+                    key: 'V',
+                    id: 'canvas-V',
+                    domain: { xMin: -5, xMax: 5, yMin: -5, yMax: 5 },
+                    func: (x) => Math.abs(-2 * x),
+                    tDomain: { tMin: -1.5, tMax: 1.5 },
+                    isX: false,
+                    drawPoints: 50,
+                    xScale: 1.5,
+                    yScale: 1,
+                },
+                {
+                    key: 'E',
+                    id: 'canvas-E',
+                    domain: { xMin: -5, xMax: 5, yMin: -5, yMax: 5 },
+                    func: (y) => -3 * Math.abs(Math.sin(y)),
+                    tDomain: { tMin: -Math.PI, tMax: Math.PI },
+                    isX: true,
+                    drawPoints: 80,
+                    xScale: 1,
+                    yScale: 1.5,
+                },
+            ];
+
+            // 2. Define the heart graph data
+            const heartData = {
+                key: 'H',
+                func: (t) => ({
+                    // Classic heart parametric equation
+                    x: 16 * Math.pow(Math.sin(t), 3),
+                    y: 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)
+                }),
+                tDomain: { tMin: 0, tMax: 2 * Math.PI },
+                drawPoints: 500,
+                // Define mathematical range for the heart shape
+                xRange: 35, 
+                yRange: 35, 
+            };
+
+
+            /**
+             * Converts mathematical coordinates (x, y) to canvas coordinates.
+             */
+            function toCanvasCoord(x, y, scale, W, H) {
+                const centerW = W / 2;
+                const centerH = H / 2;
+                return {
+                    x: centerW + x * scale,
+                    y: centerH - y * scale, // Invert y-axis for standard graphing
+                };
+            }
+
+            /**
+             * Draws the X and Y axes onto a specific canvas (non-animated version for L O V E).
+             */
+            function drawStaticAxes(ctx, W, H, settings, scale, xMax, yMax) {
+                ctx.save();
+                ctx.strokeStyle = settings.axisColor;
+                ctx.lineWidth = 1;
+                ctx.font = "10px Inter, sans-serif";
+                ctx.fillStyle = settings.axisColor;
+
+                const center = toCanvasCoord(0, 0, scale, W, H);
+
+                // Draw X-Axis
+                ctx.beginPath();
+                ctx.moveTo(0, center.y);
+                ctx.lineTo(W, center.y);
+                ctx.stroke();
+                
+                // Draw Y-Axis
+                ctx.beginPath();
+                ctx.moveTo(center.x, 0);
+                ctx.lineTo(center.x, H);
+                ctx.stroke();
+
+                // Draw tick marks (fixed size for small canvas)
+                const majorTickStep = 2; 
+
+                // X-axis ticks
+                for (let x = -xMax; x <= xMax; x += majorTickStep) {
+                    if (x === 0) continue;
+                    const c = toCanvasCoord(x, 0, scale, W, H);
+                    ctx.beginPath();
+                    ctx.moveTo(c.x, center.y - 4);
+                    ctx.lineTo(c.x, center.y + 4);
+                    ctx.stroke();
+                    ctx.fillText(x.toString(), c.x - 5, center.y + 12);
+                }
+
+                // Y-axis ticks
+                for (let y = -yMax; y <= yMax; y += majorTickStep) {
+                    if (y === 0) continue;
+                    const c = toCanvasCoord(0, y, scale, W, H);
+                    ctx.beginPath();
+                    ctx.moveTo(center.x - 4, c.y);
+                    ctx.lineTo(center.x + 4, c.y);
+                    ctx.stroke();
+                    ctx.fillText(y.toString(), center.x + 8, c.y + 3);
+                }
+
+                ctx.restore();
+            }
+
+            /**
+             * Draws the X and Y axes onto the canvas with animation progress (for Heart Modal).
+             */
+            function drawAnimatedAxes(ctx, W, H, settings, scale, xMax, yMax, progress) {
+                ctx.save();
+                ctx.strokeStyle = settings.axisColor;
+                ctx.lineWidth = 1;
+                ctx.font = "14px Inter, sans-serif";
+                ctx.fillStyle = settings.axisColor;
+
+                const center = toCanvasCoord(0, 0, scale, W, H);
+
+                // Draw X-Axis based on progress (expanding from center)
+                ctx.beginPath();
+                ctx.moveTo(center.x, center.y);
+                ctx.lineTo(center.x + (W - center.x) * progress, center.y); // Positive X
+                ctx.moveTo(center.x, center.y);
+                ctx.lineTo(center.x - center.x * progress, center.y); // Negative X
+                ctx.stroke();
+
+                // Draw Y-Axis based on progress (expanding from center)
+                const maxDrawY_Up = center.y;
+                const maxDrawY_Down = H - center.y;
+                ctx.beginPath();
+                ctx.moveTo(center.x, center.y);
+                ctx.lineTo(center.x, center.y - maxDrawY_Up * progress); // Positive Y (Up)
+                ctx.moveTo(center.x, center.y);
+                ctx.lineTo(center.x, center.y + maxDrawY_Down * progress); // Negative Y (Down)
+                ctx.stroke();
+
+
+                if (progress === 1) {
+                    // Draw Ticks and Labels only when animation is complete
+                    const majorTickStep = (W > 300) ? 5 : 2; 
+
+                    // X-axis ticks
+                    for (let x = -xMax; x <= xMax; x += majorTickStep) {
+                        if (x === 0) continue;
+                        const c = toCanvasCoord(x, 0, scale, W, H);
+                        ctx.beginPath();
+                        ctx.moveTo(c.x, center.y - 4);
+                        ctx.lineTo(c.x, center.y + 4);
+                        ctx.stroke();
+                        ctx.fillText(x.toString(), c.x - 5, center.y + 12);
+                    }
+
+                    // Y-axis ticks
+                    for (let y = -yMax; y <= yMax; y += majorTickStep) {
+                        if (y === 0) continue;
+                        const c = toCanvasCoord(0, y, scale, W, H);
+                        ctx.beginPath();
+                        ctx.moveTo(center.x - 4, c.y);
+                        ctx.lineTo(center.x + 4, c.y);
+                        ctx.stroke();
+                        ctx.fillText(y.toString(), center.x + 8, c.y + 3);
+                    }
+                }
+                ctx.restore();
+            }
+
+
+            /**
+             * Generates the array of points for a given equation.
+             */
+            function generatePoints(letter, W) {
+                const points = [];
+                const step = (letter.tDomain.tMax - letter.tDomain.tMin) / (letter.drawPoints - 1);
+                
+                let xMax, scale;
+                if (letter.key === 'H') {
+                    xMax = letter.xRange;
+                    // Calculate scale based on the available width and mathematical range
+                    scale = (W / xMax) * 0.5; // Factor of 0.5 to keep it contained
+                } else {
+                    xMax = letter.domain.xMax;
+                    scale = W / (xMax * 2);
+                }
+
+                for (let i = 0; i < letter.drawPoints; i++) {
+                    const t = letter.tDomain.tMin + i * step;
+                    let x, y;
+
+                    if (letter.isX === 'param' || letter.key === 'H') {
+                        const result = letter.func(t);
+                        x = result.x;
+                        y = result.y;
+                    } else if (letter.isX) {
+                        y = t;
+                        x = letter.func(y);
+                    } else {
+                        x = t;
+                        y = letter.func(x);
+                    }
+
+                    // Apply letter-specific scaling (only for L O V E)
+                    const finalX = letter.xScale ? x * letter.xScale : x;
+                    const finalY = letter.yScale ? y * letter.yScale : y;
+
+                    const coord = toCanvasCoord(finalX, finalY, scale, W, W);
+                    points.push(coord);
+                }
+                return { points, scale, xMax };
+            }
+
+            /**
+             * Draws a segment of the curve based on the animation progress.
+             */
+            function drawCurveSegment(ctx, progress, data, settings) {
+                const points = data.points;
+                const numPoints = points.length;
+                const drawCount = Math.floor(progress * numPoints);
+
+                if (drawCount < 1) return;
+
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+
+                for (let i = 1; i < drawCount; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                
+                if (progress === 1 && numPoints > 0) {
+                     ctx.lineTo(points[numPoints - 1].x, points[numPoints - 1].y);
+                }
+
+                ctx.strokeStyle = settings.lineColor;
+                ctx.lineWidth = settings.lineWidth;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+
+            // --- Animation Setup (L O V E) ---
+
+            const drawProgress = {};
+            const graphData = {};
+            // Initialize the timeline as PAUSED
+            const tl = gsap.timeline({ defaults: { duration: 1.5, ease: "power2.inOut" }, paused: true });
+
+            // Initialize all small graphs and data
+            letters.forEach(letter => {
+                const canvas = document.getElementById(letter.id);
+                const ctx = canvas.getContext('2d');
+                const { points, scale, xMax } = generatePoints(letter, CANVAS_SIZE);
+                
+                graphData[letter.key] = { ctx, points, letter, scale, xMax, drawProgress: 0 };
+
+                // Start the local animation loop for each graph
+                function localAnimate() {
+                    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+                    // Use the static axis drawing for the L O V E graphs
+                    drawStaticAxes(ctx, CANVAS_SIZE, CANVAS_SIZE, globalSettings, graphData[letter.key].scale, graphData[letter.key].xMax, letter.domain.yMax);
+                    
+                    const progress = graphData[letter.key].drawProgress;
+                    if (progress > 0) {
+                        drawCurveSegment(ctx, progress, graphData[letter.key], globalSettings);
+                    }
+                    requestAnimationFrame(localAnimate);
+                }
+                localAnimate();
+            });
+
+            // Function to animate a single letter
+            function animateLetter(key) {
+                tl.to(graphData[key], {
+                    drawProgress: 1,
+                    duration: 1.5,
+                    ease: "power2.inOut"
+                }, ">"); // Start sequentially after the previous letter
+            }
+            
+            // Build the Sequential Timeline (L O V E)
+            animateLetter('L');
+            animateLetter('O');
+            animateLetter('V');
+            animateLetter('E');
+
+            // Final text reveal
+            tl.to(subtext, {
+                opacity: 1,
+                y: -5,
+                duration: 1,
+                ease: "power4.out"
+            }, ">-0.5"); // Overlap slightly with the last letter draw
+
+
+            // --- Modal Interaction Logic (Intro) ---
+            startButton.addEventListener('click', () => {
+                gsap.to(modalContent, {
+                    scale: 0.8,
+                    opacity: 0,
+                    duration: 0.4,
+                    onComplete: () => {
+                        introModal.style.display = 'none';
+                    }
+                });
+                gsap.to(introModal, {
+                    opacity: 0,
+                    duration: 0.5,
+                    delay: 0.2,
+                });
+
+                tl.play();
+                // Typeset the heart formula after the intro modal is gone
+                if (window.MathJax) {
+                    MathJax.typesetPromise([document.getElementById('heart-formula-text')]).catch((err) => console.error("MathJax typesetting failed:", err));
+                }
+            });
+
+            // --- Heart Graph Logic ---
+
+            const heartCtx = heartCanvas.getContext('2d');
+            let heartAnimationId = null;
+            // New state variables for heart animation
+            let heartDrawProgress = 0;
+            let axisDrawProgress = 0; 
+            let heartPointsData = null; 
+
+            // Function to create a single "I LOVE YOU" drop
+            function createDrop(W) {
+                messageDrops.push({
+                    text: "I LOVE YOU",
+                    x: Math.random() * W, // Random initial X
+                    y: -20, // Start above the canvas
+                    vy: 1.5 + Math.random() * 1.5, // Vertical speed
+                    alpha: 1,
+                });
+            }
+
+            // Function to handle continuous drop creation
+            function startMessageRain() {
+                if (dropInterval) clearInterval(dropInterval);
+                // Create a new message every 100-200ms
+                dropInterval = setInterval(() => {
+                    if (isRaining && heartCanvas.width > 0) {
+                        createDrop(heartCanvas.width);
+                    }
+                }, 150);
+            }
+
+            function resizeHeartCanvas() {
+                // Determine the largest square size that fits the viewport
+                const size = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.9);
+                heartCanvas.width = size;
+                heartCanvas.height = size;
+
+                // Recalculate points for the new size
+                heartPointsData = generatePoints(heartData, size);
+            }
+
+            function heartAnimate() {
+                const W = heartCanvas.width;
+                const H = heartCanvas.height;
+                // Settings for the large heart graph
+                const heartGraphSettings = {
+                    ...globalSettings,
+                    lineWidth: W > 500 ? 6 : 4,
+                    lineColor: '#FCA5A5' 
+                };
+
+                heartCtx.clearRect(0, 0, W, H);
+                
+                if (heartPointsData) {
+                    // 1. Draw axes with animation progress
+                    drawAnimatedAxes(heartCtx, W, H, globalSettings, heartPointsData.scale, heartData.xRange, heartData.yRange, axisDrawProgress);
+                    
+                    // 2. Draw the heart curve segment only when axes are mostly drawn
+                    if (axisDrawProgress > 0.8) {
+                         drawCurveSegment(heartCtx, heartDrawProgress, heartPointsData, heartGraphSettings);
+                    }
+
+                    // 3. Draw I LOVE YOU rain effect
+                    if (isRaining) {
+                        heartCtx.save();
+                        heartCtx.font = TEXT_RAIN_FONT;
+                        heartCtx.textAlign = 'center';
+                        
+                        // Update and draw drops
+                        for (let i = messageDrops.length - 1; i >= 0; i--) {
+                            const drop = messageDrops[i];
+                            
+                            // Update position
+                            drop.y += drop.vy;
+                            drop.vy += 0.05; // Slight acceleration (gravity)
+
+                            // Set a random color that is a shade of red/pink
+                            const colorH = 330 + Math.random() * 30; // Hues from 330 to 360 (pink to red)
+                            heartCtx.fillStyle = `hsl(${colorH}, 80%, 70%)`;
+                            heartCtx.globalAlpha = 0.8; 
+
+                            // Draw
+                            heartCtx.fillText(drop.text, drop.x, drop.y);
+
+                            // Check if drop is off screen (remove it)
+                            if (drop.y > H + 50) {
+                                messageDrops.splice(i, 1);
+                            }
+                        }
+                        heartCtx.restore();
+                    }
+                }
+                
+                heartAnimationId = requestAnimationFrame(heartAnimate);
+            }
+
+            function showHeartGraph() {
+                resizeHeartCanvas();
+                
+                heartModal.style.pointerEvents = 'auto';
+
+                gsap.to(heartModal, { opacity: 1, duration: 0.7 });
+                
+                // Reset progress variables
+                heartDrawProgress = 0;
+                axisDrawProgress = 0;
+                isRaining = false;
+                messageDrops = [];
+                if (dropInterval) clearInterval(dropInterval);
+
+
+                // Master timeline for the heart animation sequence
+                const heartTL = gsap.timeline({
+                    onStart: () => heartAnimate(), // Start the canvas loop
+                    onComplete: () => {
+                        // Ensure final states are set
+                        axisDrawProgress = 1;
+                        heartDrawProgress = 1;
+                    }
+                });
+
+                // 1. Draw Axes Slowly (Duration: 1.5s)
+                heartTL.to(window, {
+                    axisDrawProgress: 1,
+                    duration: 1.5,
+                    ease: "power2.out",
+                    onUpdate: () => { axisDrawProgress = window.axisDrawProgress; }
+                }, 0);
+
+                // 2. Draw Heart Curve Slowly (Duration: 5.0s)
+                // Starts slightly before the axes finish for a smoother transition
+                heartTL.to(window, {
+                    heartDrawProgress: 1,
+                    duration: 5.0, // SLOWER DURATION
+                    ease: "power3.out",
+                    onUpdate: () => { heartDrawProgress = window.heartDrawProgress; }
+                }, ">-0.5"); 
+
+                // 3. Start I LOVE YOU rain after the heart is fully drawn
+                heartTL.add(() => {
+                    isRaining = true;
+                    startMessageRain();
+                }, ">+0.5"); // Wait 0.5s after heart finishes
+
+                // Add resize listener
+                window.addEventListener('resize', resizeHeartCanvas);
+            }
+
+            function hideHeartGraph() {
+                gsap.killTweensOf(window); 
+                cancelAnimationFrame(heartAnimationId); 
+
+                isRaining = false;
+                if (dropInterval) clearInterval(dropInterval);
+                messageDrops = []; // Clear all drops
+
+                gsap.to(heartModal, { 
+                    opacity: 0, 
+                    duration: 0.5,
+                    onComplete: () => {
+                        heartModal.style.pointerEvents = 'none';
+                    }
+                });
+
+                window.removeEventListener('resize', resizeHeartCanvas);
+            }
+
+            // --- Hook up Heart Formula Click ---
+            heartFormulaContainer.addEventListener('click', showHeartGraph);
+            closeHeartButton.addEventListener('click', hideHeartGraph);
+        });
+
+    </script>
+</body>
+</html>
