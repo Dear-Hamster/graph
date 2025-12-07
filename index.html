@@ -58,7 +58,7 @@
 </head>
 <!-- DARK THEME APPLIED HERE -->
 <body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4 text-gray-100">
-
+<audio id="bgMusic" src="https://raw.githubusercontent.com/Dear-Hamster/for_you/main/assets/Blue_index.mp3"></audio>
     <!-- 
         INTRODUCTION MODAL 
         This is shown first and pauses the main animation 
@@ -672,5 +672,21 @@
         });
 
     </script>
+    <script>
+    const btn = document.getElementById("start-button");
+    const music = document.getElementById("bgMusic");
+
+    btn.addEventListener("click", () => {
+        if (music.paused) {
+            music.play();
+            music.loop = true;
+            btn.textContent = "Pause Music ⏸️";
+        } else {
+            music.pause();
+            btn.textContent = "Play Music 🎵";
+        }
+    });
+</script>
 </body>
 </html>
+
